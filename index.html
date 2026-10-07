@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寵物領養與照顧資訊看板 | Pet Adoption & Care Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                        },
+                        warmGray: {
+                            50: '#fafaf9',
+                            100: '#f5f5f4',
+                            800: '#292524',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+        }
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-amber-50/50 text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Header Navbar -->
+    <header class="bg-white border-b border-amber-100 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white text-xl shadow">
+                        <i class="fa-solid fa-paw"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-900 leading-tight">浪我陪伴你</h1>
+                        <p class="text-xs text-amber-700 font-medium">寵物領養與照顧指南看板</p>
+                    </div>
+                </div>
+
+                <!-- Main Navigation Tabs -->
+                <nav class="flex space-x-1 sm:space-x-2 bg-amber-100/60 p-1 rounded-xl">
+                    <button id="tab-adoption-btn" onclick="switchTab('adoption')" 
+                        class="tab-btn px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white text-amber-700 shadow-sm">
+                        <i class="fa-solid fa-heart mr-1.5"></i>動物領養資訊
+                    </button>
+                    <button id="tab-care-btn" onclick="switchTab('care')" 
+                        class="tab-btn px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-gray-600 hover:text-amber-700">
+                        <i class="fa-solid fa-book-open-reader mr-1.5"></i>寵物照顧要點
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ================= PAGE 1: ADOPTION SECTION ================= -->
+        <section id="section-adoption" class="fade-in space-y-6">
+
+            <!-- Top Notification / Status Banner -->
+            <div id="data-status-banner" class="hidden rounded-xl p-4 transition-all duration-300"></div>
+
+            <!-- Dashboard Analytics & Search Filters Container -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+                <!-- Filters & Controls Sidebar / Top bar -->
+                <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-amber-100 shadow-sm space-y-4">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                        <h2 class="text-lg font-bold text-gray-800 flex items-center">
+                            <i class="fa-solid fa-sliders text-amber-500 mr-2"></i>篩選與搜尋領養動物
+                        </h2>
+                        
+                        <div class="flex items-center space-x-2">
+                            <!-- Toggle View Mode (Grid / List) -->
+                            <div class="bg-gray-100 p-1 rounded-lg flex space-x-1">
+                                <button id="view-grid-btn" onclick="setViewMode('grid')" class="px-3 py-1.5 rounded text-xs font-semibold bg-white shadow-sm text-amber-600">
+                                    <i class="fa-solid fa-border-all mr-1"></i>卡片
+                                </button>
+                                <button id="view-list-btn" onclick="setViewMode('list')" class="px-3 py-1.5 rounded text-xs font-semibold text-gray-500 hover:text-gray-800">
+                                    <i class="fa-solid fa-list mr-1"></i>列表
+                                </button>
+                            </div>
+                            <!-- Refresh / Reload Button -->
+                            <button onclick="fetchAdoptionData()" class="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-medium transition-colors flex items-center">
+                                <i class="fa-solid fa-rotate-right mr-1" id="refresh-icon"></i>重新重新整理
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter Controls Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                        <!-- Keyword Search -->
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">關鍵字搜尋</label>
+                            <div class="relative">
+                                <input type="text" id="filter-keyword" oninput="applyFilters()" placeholder="搜尋品種、收容所或備註..." 
+                                    class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition">
+                                <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                            </div>
+                        </div>
+
+                        <!-- Animal Kind -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">動物種類</label>
+                            <select id="filter-kind" onchange="applyFilters()" class="w-full py-2 px-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white">
+                                <option value="ALL">全部種類</option>
+                                <option value="貓">貓咪 🐱</option>
+                                <option value="狗">狗狗 🐶</option>
+                                <option value="OTHER">其他小動物 🐰</option>
+                            </select>
+                        </div>
+
+                        <!-- Sex -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">性別</label>
+                            <select id="filter-sex" onchange="applyFilters()" class="w-full py-2 px-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white">
+                                <option value="ALL">不限性別</option>
+                                <option value="M">公 (Male)</option>
+                                <option value="F">母 (Female)</option>
+                                <option value="N">未已知/未標示</option>
+                            </select>
+                        </div>
+
+                        <!-- Region / County -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">收容縣市</label>
+                            <select id="filter-county" onchange="applyFilters()" class="w-full py-2 px-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white">
+                                <option value="ALL">全台縣市</option>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics & Charts Collapsible Container -->
+                <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-amber-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-md font-bold text-gray-800 flex items-center">
+                            <i class="fa-solid fa-chart-pie text-amber-500 mr-2"></i>當前載入資料統計分析
+                        </h3>
+                        <button onclick="toggleChartSection()" id="toggle-chart-btn" class="text-xs text-amber-600 font-semibold hover:underline">
+                            <i class="fa-solid fa-chevron-up mr-1"></i>收合統計圖表
+                        </button>
+                    </div>
+
+                    <div id="charts-wrapper" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Chart 1: Animal Type Distribution -->
+                        <div class="bg-amber-50/50 p-4 rounded-xl flex flex-col items-center">
+                            <h4 class="text-xs font-bold text-gray-600 mb-2">動物種類比例</h4>
+                            <div class="w-full h-44 relative">
+                                <canvas id="chart-kind"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 2: Gender Ratio -->
+                        <div class="bg-amber-50/50 p-4 rounded-xl flex flex-col items-center">
+                            <h4 class="text-xs font-bold text-gray-600 mb-2">性別比例統計</h4>
+                            <div class="w-full h-44 relative">
+                                <canvas id="chart-gender"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 3: Top Counties -->
+                        <div class="bg-amber-50/50 p-4 rounded-xl flex flex-col items-center">
+                            <h4 class="text-xs font-bold text-gray-600 mb-2">收容數量前五名縣市</h4>
+                            <div class="w-full h-44 relative">
+                                <canvas id="chart-county"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Counter & Info Bar -->
+            <div class="flex justify-between items-center px-1">
+                <span class="text-sm font-semibold text-gray-600">
+                    搜尋結果：共 <span id="results-count" class="text-amber-600 font-bold">0</span> 隻待領養寶貝
+                </span>
+                <span class="text-xs text-gray-400">點擊卡片可查看詳細收容資訊與聯絡方式</span>
+            </div>
+
+            <!-- Skeleton Loading State Container -->
+            <div id="loading-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Generated by JS: 8 Skeleton cards -->
+            </div>
+
+            <!-- Error / Empty State Container -->
+            <div id="error-container" class="hidden bg-white p-8 rounded-2xl border border-red-100 text-center shadow-sm max-w-2xl mx-auto my-8">
+                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3 id="error-title" class="text-lg font-bold text-gray-800 mb-2">無法連線至農業部 open data API</h3>
+                <p id="error-desc" class="text-sm text-gray-600 mb-6">可能原因包含：來源伺服器維護中、網路中斷或受跨網域存取 (CORS) 限制。</p>
+                <div class="flex justify-center space-x-3">
+                    <button onclick="fetchAdoptionData()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium text-sm rounded-xl shadow transition">
+                        <i class="fa-solid fa-rotate-right mr-1.5"></i>重新嘗試連線
+                    </button>
+                    <button onclick="loadMockData()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm rounded-xl transition">
+                        <i class="fa-solid fa-database mr-1.5"></i>載入預覽範例資料
+                    </button>
+                </div>
+            </div>
+
+            <!-- Real Data Display Container (Grid / List) -->
+            <div id="adoption-data-container" class="hidden">
+                <!-- Content will be injected here (Grid View by default) -->
+            </div>
+
+            <!-- Pagination Controls -->
+            <div id="pagination-wrapper" class="hidden flex justify-center items-center space-x-2 pt-6 pb-2">
+                <button id="btn-prev-page" onclick="changePage(-1)" class="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left mr-1"></i>上一頁
+                </button>
+                <span id="page-info" class="text-sm font-semibold text-gray-600 px-3">第 1 / 1 頁</span>
+                <button id="btn-next-page" onclick="changePage(1)" class="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium hover:bg-amber-50 disabled:opacity-40 disabled:cursor-not-allowed">
+                    下一頁<i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+
+        </section>
+
+
+        <!-- ================= PAGE 2: PET CARE GUIDE SECTION ================= -->
+        <section id="section-care" class="hidden fade-in space-y-8">
+
+            <!-- Banner Header -->
+            <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
+                <div class="relative z-10 max-w-2xl">
+                    <span class="bg-amber-400/40 text-amber-100 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">新手飼主必讀</span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold mt-3 mb-2">終生承諾，用心陪伴</h2>
+                    <p class="text-amber-100 text-sm sm:text-base">領養不僅僅給予牠們一個家，更是一份長達十數年的責任。這裡整理了最完整的照護知識與法律規範。</p>
+                </div>
+                <i class="fa-solid fa-heart-pulse absolute -right-6 -bottom-6 text-9xl text-white/10"></i>
+            </div>
+
+            <!-- Care Guide Category Buttons -->
+            <div class="flex border-b border-gray-200 space-x-4 sm:space-x-8">
+                <button onclick="switchCareTab('cat')" id="care-tab-cat" class="care-nav-btn border-b-2 border-amber-500 pb-3 text-amber-600 font-bold text-sm sm:text-base flex items-center">
+                    <i class="fa-solid fa-cat mr-2 text-lg"></i>貓咪照護
+                </button>
+                <button onclick="switchCareTab('dog')" id="care-tab-dog" class="care-nav-btn border-b-2 border-transparent pb-3 text-gray-500 hover:text-gray-800 font-semibold text-sm sm:text-base flex items-center">
+                    <i class="fa-solid fa-dog mr-2 text-lg"></i>狗狗照護
+                </button>
+                <button onclick="switchCareTab('law')" id="care-tab-law" class="care-nav-btn border-b-2 border-transparent pb-3 text-gray-500 hover:text-gray-800 font-semibold text-sm sm:text-base flex items-center">
+                    <i class="fa-solid fa-scale-balanced mr-2 text-lg"></i>法規與晶片絕育
+                </button>
+            </div>
+
+            <!-- Care Content View Panel -->
+            <div id="care-content-panel">
+                <!-- Injected dynamically based on care category -->
+            </div>
+
+            <!-- FAQ Section -->
+            <div class="bg-white p-6 sm:p-8 rounded-2xl border border-amber-100 shadow-sm space-y-4">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center mb-4">
+                    <i class="fa-solid fa-circle-question text-amber-500 mr-2.5 text-xl"></i>領養常見問題 (FAQ)
+                </h3>
+
+                <div class="space-y-3">
+                    <details class="group border border-gray-100 rounded-xl bg-gray-50/50 overflow-hidden transition">
+                        <summary class="flex justify-between items-center font-semibold p-4 cursor-pointer text-gray-800 group-open:bg-amber-50 group-open:text-amber-700">
+                            <span>Q1: 領養公立收容所的動物需要費用嗎？需要準備什麼？</span>
+                            <i class="fa-solid fa-chevron-down transition transform group-open:rotate-180 text-xs"></i>
+                        </summary>
+                        <div class="p-4 text-sm text-gray-600 bg-white border-t border-gray-100 leading-relaxed">
+                            公立收容所領養通常是免費的，且多數已包含首劑疫苗、狂犬病疫苗注射、晶片植入與絕育補助。前往領養時，請攜帶**本人國民身分證**（須年滿18歲），並自備適當的運輸籠（貓咪/小動物）或牽繩/胸背帶（狗狗）。
+                        </div>
+                    </details>
+
+                    <details class="group border border-gray-100 rounded-xl bg-gray-50/50 overflow-hidden transition">
+                        <summary class="flex justify-between items-center font-semibold p-4 cursor-pointer text-gray-800 group-open:bg-amber-50 group-open:text-amber-700">
+                            <span>Q2: 帶新寵物回家前，家裡該做什麼準備？</span>
+                            <i class="fa-solid fa-chevron-down transition transform group-open:rotate-180 text-xs"></i>
+                        </summary>
+                        <div class="p-4 text-sm text-gray-600 bg-white border-t border-gray-100 leading-relaxed">
+                            請先將家中的危險物品（電線、藥物、易碎品、對寵物有毒的植物如百合花）收妥。貓咪家庭務必完成**防護門窗裝設**；狗狗家庭需準備合適的休息墊與適當圍欄。同時預先買好適合該年齡層的飼料與清潔用品。
+                        </div>
+                    </details>
+
+                    <details class="group border border-gray-100 rounded-xl bg-gray-50/50 overflow-hidden transition">
+                        <summary class="flex justify-between items-center font-semibold p-4 cursor-pointer text-gray-800 group-open:bg-amber-50 group-open:text-amber-700">
+                            <span>Q3: 什麼是「三不離棄」原則？</span>
+                            <i class="fa-solid fa-chevron-down transition transform group-open:rotate-180 text-xs"></i>
+                        </summary>
+                        <div class="p-4 text-sm text-gray-600 bg-white border-t border-gray-100 leading-relaxed">
+                            不論結婚搬家、生兒育女或寵物年老患病，皆「不搬離、不放棄、不遺棄」。寵物壽命約 10-18 年，決定領養前請務必評估未來的生涯規劃。
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-100 mt-12 py-6 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p class="mb-1">資料來源：農業部公立動物收容系統 Open Data (UnitId: QcbUEzN6E6DL)</p>
+            <p>© 2026 浪我陪伴你 - 寵物領養與照顧資訊看板 | 宣導以領養代替購買</p>
+        </div>
+    </footer>
+
+
+    <!-- Modal for Animal Full Details -->
+    <div id="detail-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto fade-in">
+        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 relative">
+            <!-- Close Button -->
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-10 w-9 h-9 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <!-- Modal Content Container -->
+            <div id="modal-body">
+                <!-- Dynamically populated by JS -->
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Global State & Data Store
+        const API_URL = 'https://data.moa.gov.tw/Service/OpenData/TransService.aspx?UnitId=QcbUEzN6E6DL';
+        let rawAdoptionData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const pageSize = 12;
+        let currentViewMode = 'grid'; // 'grid' or 'list'
+        let isChartsVisible = true;
+
+        // Chart Instances
+        let chartKindInstance = null;
+        let chartGenderInstance = null;
+        let chartCountyInstance = null;
+
+        // County Mapping Code to Name
+        const countyMap = {
+            '2': '宜蘭縣', '3': '桃園市', '4': '新竹縣', '5': '新竹市',
+            '6': '苗栗縣', '7': '臺中市', '8': '彰化縣', '9': '南投縣',
+            '10': '雲林縣', '11': '嘉義縣', '12': '嘉義市', '13': '臺南市',
+            '14': '高雄市', '15': '屏東縣', '16': '花蓮縣', '17': '臺東縣',
+            '18': '澎湖縣', '19': '金門縣', '20': '連江縣', '21': '基隆市',
+            '22': '新北市', '23': '臺北市'
+        };
+
+        // Default Image Fallbacks
+        const defaultImages = {
+            '貓': 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&auto=format&fit=crop&q=80',
+            '狗': 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&auto=format&fit=crop&q=80',
+            'OTHER': 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=600&auto=format&fit=crop&q=80'
+        };
+
+        // Mock Fallback Data (In case API is unreachable or blocked by CORS)
+        const mockFallbackData = [
+            {
+                animal_id: '1001', animal_subid: 'NTPC2026001', animal_kind: '貓', animal_sex: 'F',
+                animal_bodytype: 'MEDIUM', animal_colour: '虎斑色', animal_age: 'ADULT',
+                animal_place: '新北市板橋區動物之家', animal_shelter_name: '新北市板橋區公立動物之家',
+                shelter_address: '新北市板橋區板城路28號', shelter_tel: '02-8966-2158',
+                album_file: 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=600&auto=format&fit=crop&q=80',
+                animal_remark: '個性親人活潑，喜歡討摸摸，已完成基礎健檢與驅蟲。', cName: '新北市', animal_createtime: '2026/03/01'
+            },
+            {
+                animal_id: '1002', animal_subid: 'TPC2026042', animal_kind: '狗', animal_sex: 'M',
+                animal_bodytype: 'LARGE', animal_colour: '黃褐色', animal_age: 'ADULT',
+                animal_place: '臺北市動物之家', animal_shelter_name: '臺北市動物之家',
+                shelter_address: '臺北市內湖區潭美街852號', shelter_tel: '02-8791-3064',
+                album_file: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=600&auto=format&fit=crop&q=80',
+                animal_remark: '溫和懂事，會聽坐下指令，適合有庭院或定時散步的家庭。', cName: '臺北市', animal_createtime: '2026/03/02'
+            },
+            {
+                animal_id: '1003', animal_subid: 'TYC2026088', animal_kind: '貓', animal_sex: 'M',
+                animal_bodytype: 'SMALL', animal_colour: '橘白色', animal_age: 'CHILD',
+                animal_place: '桃園市動物保護教育園區', animal_shelter_name: '桃園市動物保護教育園區',
+                shelter_address: '桃園市新屋區永興里海堤路189號', shelter_tel: '03-864-1588',
+                album_file: 'https://images.unsplash.com/photo-1574158622682-e40e69881006?w=600&auto=format&fit=crop&q=80',
+                animal_remark: '好奇心強的小橘貓，精力旺盛，對玩具極有興趣。', cName: '桃園市', animal_createtime: '2026/03/04'
+            },
+            {
+                animal_id: '1004', animal_subid: 'TCC2026019', animal_kind: '狗', animal_sex: 'F',
+                animal_bodytype: 'MEDIUM', animal_colour: '黑色', animal_age: 'CHILD',
+                animal_place: '臺中市南屯園區', animal_shelter_name: '臺中市動物之家南屯園區',
+                shelter_address: '臺中市南屯區中台路601號', shelter_tel: '04-2385-0949',
+                album_file: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600&auto=format&fit=crop&q=80',
+                animal_remark: '乖巧聰明的黑狗妹，眼神無辜，對人非常友善。', cName: '臺中市', animal_createtime: '2026/03/05'
+            },
+            {
+                animal_id: '1005', animal_subid: 'KHC2026031', animal_kind: '其他', animal_sex: 'F',
+                animal_bodytype: 'SMALL', animal_colour: '純白色', animal_age: 'ADULT',
+                animal_place: '高雄市燕巢關愛園區', animal_shelter_name: '高雄市壽山/燕巢動物收容所',
+                shelter_address: '高雄市燕巢區師大路100號', shelter_tel: '07-605-1002',
+                album_file: 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=600&auto=format&fit=crop&q=80',
+                animal_remark: '可愛小白兔，個性安定，需補充足夠牧草與乾淨飲水。', cName: '高雄市', animal_createtime: '2026/03/06'
+            },
+            {
+                animal_id: '1006', animal_subid: 'TNC2026055', animal_kind: '貓', animal_sex: 'F',
+                animal_bodytype: 'MEDIUM', animal_colour: '三花色', animal_age: 'ADULT',
+                animal_place: '臺南市灣裡收容所', animal_shelter_name: '臺南市動物之家灣裡站',
+                shelter_address: '臺南市南區省躬里萬年路620號', shelter_tel: '06-296-4139',
+                album_file: 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=600&auto=format&fit=crop&q=80',
+                animal_remark: '氣質優雅的三花貓，習慣給人抱，找尋溫馨的永久家園。', cName: '臺南市', animal_createtime: '2026/03/07'
+            }
+        ];
+
+        window.onload = function() {
+            renderSkeletons();
+            fetchAdoptionData();
+            renderCareGuide('cat');
+        };
+
+        // Switch Main Tabs
+        function switchTab(tabName) {
+            const adoptionSection = document.getElementById('section-adoption');
+            const careSection = document.getElementById('section-care');
+            const adoptionBtn = document.getElementById('tab-adoption-btn');
+            const careBtn = document.getElementById('tab-care-btn');
+
+            if (tabName === 'adoption') {
+                adoptionSection.classList.remove('hidden');
+                careSection.classList.add('hidden');
+                adoptionBtn.className = "tab-btn px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white text-amber-700 shadow-sm";
+                careBtn.className = "tab-btn px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-gray-600 hover:text-amber-700";
+            } else {
+                adoptionSection.classList.add('hidden');
+                careSection.classList.remove('hidden');
+                careBtn.className = "tab-btn px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white text-amber-700 shadow-sm";
+                adoptionBtn.className = "tab-btn px-3 sm:px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-gray-600 hover:text-amber-700";
+            }
+        }
+
+        // Render Skeleton Cards
+        function renderSkeletons() {
+            const container = document.getElementById('loading-container');
+            let html = '';
+            for (let i = 0; i < 8; i++) {
+                html += `
+                    <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
+                        <div class="skeleton h-48 rounded-xl w-full"></div>
+                        <div class="skeleton h-4 rounded w-2/3"></div>
+                        <div class="skeleton h-3 rounded w-1/2"></div>
+                        <div class="flex space-x-2 pt-2">
+                            <div class="skeleton h-6 rounded-full w-1/3"></div>
+                            <div class="skeleton h-6 rounded-full w-1/3"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        async function fetchAdoptionData() {
+            const loadingContainer = document.getElementById('loading-container');
+            const errorContainer = document.getElementById('error-container');
+            const dataContainer = document.getElementById('adoption-data-container');
+            const statusBanner = document.getElementById('data-status-banner');
+            const refreshIcon = document.getElementById('refresh-icon');
+
+            // UI Loading state
+            loadingContainer.classList.remove('hidden');
+            errorContainer.classList.add('hidden');
+            dataContainer.classList.add('hidden');
+            statusBanner.classList.add('hidden');
+            refreshIcon.classList.add('fa-spin');
+
+            try {
+                // Fetch with 8-second timeout controller
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                const response = await fetch(API_URL, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error(`HTTP 錯誤狀態: ${response.status}`);
+                
+                const data = await response.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error("回傳資料格式不符合期待或為空");
+                }
+
+                // Process Data successfully
+                rawAdoptionData = processRawData(data);
+                showStatusBanner('success', `成功連線政府 Open Data API，載入 ${rawAdoptionData.length} 筆最新領養資料！`);
+                
+                populateCountyOptions(rawAdoptionData);
+                applyFilters();
+
+            } catch (err) {
+                console.warn("API Fetch Error:", err.message);
+                showErrorState(err.message);
+            } finally {
+                refreshIcon.classList.remove('fa-spin');
+                loadingContainer.classList.add('hidden');
+            }
+        }
+
+        // Process raw API data (normalize county names, dates)
+        function processRawData(data) {
+            return data.map(item => {
+                let countyName = item.cName || countyMap[item.animal_area_pkid] || '其他縣市';
+                return {
+                    ...item,
+                    cName: countyName,
+                    animal_kind: item.animal_kind || '其他',
+                    animal_sex: item.animal_sex || 'N',
+                    album_file: item.album_file ? item.album_file.trim() : ''
+                };
+            });
+        }
+
+        // Load Mock / Fallback Data manually
+        function loadMockData() {
+            document.getElementById('error-container').classList.add('hidden');
+            document.getElementById('loading-container').classList.add('hidden');
+            
+            rawAdoptionData = processRawData(mockFallbackData);
+            showStatusBanner('warning', '目前正使用【預覽備援資料】，模式下仍可體驗完整篩選與圖表功能。');
+            
+            populateCountyOptions(rawAdoptionData);
+            applyFilters();
+        }
+
+        // Display Error Box
+        function showErrorState(msg) {
+            document.getElementById('loading-container').classList.add('hidden');
+            document.getElementById('adoption-data-container').classList.add('hidden');
+            document.getElementById('pagination-wrapper').classList.add('hidden');
+            
+            const errorContainer = document.getElementById('error-container');
+            document.getElementById('error-desc').textContent = `錯誤原因：${msg}。農業部 API 伺服器有時會有 CORS 或回應過慢情況。`;
+            errorContainer.classList.remove('hidden');
+        }
+
+        // Show Notification Status Banner
+        function showStatusBanner(type, message) {
+            const banner = document.getElementById('data-status-banner');
+            banner.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'border-green-200', 'bg-amber-50', 'text-amber-800', 'border-amber-200');
+            
+            if (type === 'success') {
+                banner.className = 'rounded-xl p-3 bg-green-50 text-green-800 border border-green-200 text-xs sm:text-sm font-medium flex items-center shadow-sm';
+                banner.innerHTML = `<i class="fa-solid fa-circle-check text-green-500 mr-2 text-base"></i>${message}`;
+            } else {
+                banner.className = 'rounded-xl p-3 bg-amber-50 text-amber-800 border border-amber-200 text-xs sm:text-sm font-medium flex items-center shadow-sm';
+                banner.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-500 mr-2 text-base"></i>${message}`;
+            }
+        }
+
+        // Populate County Filter Options
+        function populateCountyOptions(data) {
+            const countySelect = document.getElementById('filter-county');
+            const counties = [...new Set(data.map(item => item.cName))].filter(Boolean);
+            
+            let html = '<option value="ALL">全台縣市</option>';
+            counties.forEach(c => {
+                html += `<option value="${c}">${c}</option>`;
+            });
+            countySelect.innerHTML = html;
+        }
+
+        function applyFilters() {
+            const kind = document.getElementById('filter-kind').value;
+            const sex = document.getElementById('filter-sex').value;
+            const county = document.getElementById('filter-county').value;
+            const keyword = document.getElementById('filter-keyword').value.toLowerCase().trim();
+
+            filteredData = rawAdoptionData.filter(item => {
+                // Kind filter
+                if (kind === '貓' && item.animal_kind !== '貓') return false;
+                if (kind === '狗' && item.animal_kind !== '狗') return false;
+                if (kind === 'OTHER' && (item.animal_kind === '貓' || item.animal_kind === '狗')) return false;
+
+                // Sex filter
+                if (sex !== 'ALL' && item.animal_sex !== sex) return false;
+
+                // County filter
+                if (county !== 'ALL' && item.cName !== county) return false;
+
+                // Keyword Search
+                if (keyword) {
+                    const matchText = `${item.animal_place || ''} ${item.animal_Variety || ''} ${item.animal_colour || ''} ${item.animal_remark || ''} ${item.animal_subid || ''}`;
+                    if (!matchText.toLowerCase().includes(keyword)) return false;
+                }
+
+                return true;
+            });
+
+            currentPage = 1;
+            renderAdoptionView();
+            updateCharts(filteredData);
+        }
+
+        // Change View Mode (Grid vs List)
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            const gridBtn = document.getElementById('view-grid-btn');
+            const listBtn = document.getElementById('view-list-btn');
+
+            if (mode === 'grid') {
+                gridBtn.className = "px-3 py-1.5 rounded text-xs font-semibold bg-white shadow-sm text-amber-600";
+                listBtn.className = "px-3 py-1.5 rounded text-xs font-semibold text-gray-500 hover:text-gray-800";
+            } else {
+                listBtn.className = "px-3 py-1.5 rounded text-xs font-semibold bg-white shadow-sm text-amber-600";
+                gridBtn.className = "px-3 py-1.5 rounded text-xs font-semibold text-gray-500 hover:text-gray-800";
+            }
+            renderAdoptionView();
+        }
+
+        function renderAdoptionView() {
+            const container = document.getElementById('adoption-data-container');
+            const countSpan = document.getElementById('results-count');
+            const paginationWrapper = document.getElementById('pagination-wrapper');
+
+            countSpan.textContent = filteredData.length;
+
+            if (filteredData.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-12 rounded-2xl text-center border border-amber-100 shadow-sm my-4">
+                        <i class="fa-solid fa-paw text-4xl text-amber-200 mb-3"></i>
+                        <h4 class="text-base font-bold text-gray-700">查無符合條件的動物</h4>
+                        <p class="text-xs text-gray-500 mt-1">請嘗試放寬篩選條件或搜尋關鍵字。</p>
+                    </div>
+                `;
+                container.classList.remove('hidden');
+                paginationWrapper.classList.add('hidden');
+                return;
+            }
+
+            // Pagination calculation
+            const totalPages = Math.ceil(filteredData.length / pageSize);
+            const startIdx = (currentPage - 1) * pageSize;
+            const pageItems = filteredData.slice(startIdx, startIdx + pageSize);
+
+            if (currentViewMode === 'grid') {
+                // Cards Grid Layout
+                let cardsHtml = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">';
+                pageItems.forEach((item, index) => {
+                    const globalIndex = startIdx + index;
+                    const imgSrc = item.album_file || defaultImages[item.animal_kind] || defaultImages['OTHER'];
+                    const sexBadge = item.animal_sex === 'M' 
+                        ? '<span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full"><i class="fa-solid fa-mars mr-1"></i>公</span>'
+                        : item.animal_sex === 'F'
+                        ? '<span class="bg-pink-100 text-pink-700 text-xs font-bold px-2.5 py-1 rounded-full"><i class="fa-solid fa-venus mr-1"></i>母</span>'
+                        : '<span class="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">未知性別</span>';
+
+                    cardsHtml += `
+                        <div onclick="openModal(${globalIndex})" class="bg-white rounded-2xl border border-amber-100 shadow-sm hover:shadow-lg transition duration-200 cursor-pointer flex flex-col overflow-hidden group">
+                            <div class="relative h-48 bg-gray-100 overflow-hidden">
+                                <img src="${imgSrc}" onerror="this.onerror=null; this.src='${defaultImages[item.animal_kind] || defaultImages['OTHER']}';" 
+                                    alt="${item.animal_kind}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                                <div class="absolute top-3 left-3 bg-black/50 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-lg">
+                                    ${item.cName}
+                                </div>
+                            </div>
+                            <div class="p-4 flex-grow flex flex-col justify-between">
+                                <div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h3 class="font-bold text-gray-800 text-base truncate">${item.animal_Variety || item.animal_kind}</h3>
+                                        ${sexBadge}
+                                    </div>
+                                    <p class="text-xs text-gray-500 line-clamp-1 mb-2">
+                                        <i class="fa-solid fa-location-dot mr-1 text-amber-500"></i>${item.animal_place || item.animal_shelter_name || '收容所'}
+                                    </p>
+                                </div>
+                                <div class="pt-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+                                    <span><i class="fa-solid fa-tag mr-1"></i>${item.animal_colour || '花色未標示'}</span>
+                                    <span class="text-amber-600 font-semibold group-hover:underline">詳細資料 <i class="fa-solid fa-arrow-right text-xs"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                cardsHtml += '</div>';
+                container.innerHTML = cardsHtml;
+            } else {
+                // List View Layout
+                let listHtml = '<div class="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden"><ul class="divide-y divide-gray-100">';
+                pageItems.forEach((item, index) => {
+                    const globalIndex = startIdx + index;
+                    const imgSrc = item.album_file || defaultImages[item.animal_kind] || defaultImages['OTHER'];
+
+                    listHtml += `
+                        <li onclick="openModal(${globalIndex})" class="p-4 hover:bg-amber-50/50 transition cursor-pointer flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div class="flex items-center space-x-4 w-full sm:w-auto">
+                                <img src="${imgSrc}" onerror="this.onerror=null; this.src='${defaultImages[item.animal_kind] || defaultImages['OTHER']}';" 
+                                    class="w-16 h-16 rounded-xl object-cover flex-shrink-0">
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-bold text-gray-800">${item.animal_Variety || item.animal_kind}</span>
+                                        <span class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">${item.animal_kind}</span>
+                                        <span class="text-xs text-gray-500">性別: ${item.animal_sex === 'M' ? '公' : item.animal_sex === 'F' ? '母' : '未知'}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-location-dot mr-1 text-amber-500"></i>${item.animal_shelter_name || item.animal_place}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end text-xs text-gray-500">
+                                <span>入案日期: ${item.animal_createtime || '近期'}</span>
+                                <button class="px-3 py-1.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition">查看</button>
+                            </div>
+                        </li>
+                    `;
+                });
+                listHtml += '</ul></div>';
+                container.innerHTML = listHtml;
+            }
+
+            container.classList.remove('hidden');
+
+            // Render Pagination Status
+            document.getElementById('page-info').textContent = `第 ${currentPage} / ${totalPages} 頁`;
+            document.getElementById('btn-prev-page').disabled = currentPage === 1;
+            document.getElementById('btn-next-page').disabled = currentPage === totalPages;
+            paginationWrapper.classList.remove('hidden');
+        }
+
+        // Change Pagination Page
+        function changePage(delta) {
+            currentPage += delta;
+            renderAdoptionView();
+            window.scrollTo({ top: 300, behavior: 'smooth' });
+        }
+
+        function openModal(index) {
+            const item = filteredData[index];
+            if (!item) return;
+
+            const modal = document.getElementById('detail-modal');
+            const modalBody = document.getElementById('modal-body');
+            const imgSrc = item.album_file || defaultImages[item.animal_kind] || defaultImages['OTHER'];
+
+            modalBody.innerHTML = `
+                <div class="relative h-64 sm:h-80 bg-gray-900">
+                    <img src="${imgSrc}" onerror="this.onerror=null; this.src='${defaultImages[item.animal_kind] || defaultImages['OTHER']}';" 
+                        class="w-full h-full object-cover opacity-90">
+                    <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
+                        <div class="flex items-center space-x-2 mb-1">
+                            <span class="bg-amber-500 text-xs font-bold px-2.5 py-0.5 rounded-full">${item.animal_kind}</span>
+                            <span class="text-xs text-gray-300">動物編號: ${item.animal_subid || item.animal_id}</span>
+                        </div>
+                        <h2 class="text-2xl font-bold">${item.animal_Variety || item.animal_kind}</h2>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <!-- Key Attributes Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-amber-50/60 p-4 rounded-2xl text-center text-xs">
+                        <div>
+                            <span class="text-gray-400 block mb-1">性別</span>
+                            <span class="font-bold text-gray-800 text-sm">${item.animal_sex === 'M' ? '公 (Male)' : item.animal_sex === 'F' ? '母 (Female)' : '不詳'}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block mb-1">毛色</span>
+                            <span class="font-bold text-gray-800 text-sm">${item.animal_colour || '未標示'}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block mb-1">體型</span>
+                            <span class="font-bold text-gray-800 text-sm">${item.animal_bodytype || '中型'}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block mb-1">絕育狀態</span>
+                            <span class="font-bold text-gray-800 text-sm">${item.is_sterilization === 'T' ? '已絕育' : '未絕育/未知'}</span>
+                        </div>
+                    </div>
+
+                    <!-- Description & Remarks -->
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-800 mb-2 flex items-center">
+                            <i class="fa-solid fa-comment-dots text-amber-500 mr-2"></i>動物描述與備註
+                        </h4>
+                        <p class="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl leading-relaxed">
+                            ${item.animal_remark || '收容所暫無提供額外描述，歡迎親臨或電話洽詢了解性情與適應狀況。'}
+                        </p>
+                    </div>
+
+                    <!-- Shelter Contact Info -->
+                    <div class="border-t border-gray-100 pt-4 space-y-2">
+                        <h4 class="text-sm font-bold text-gray-800 mb-2 flex items-center">
+                            <i class="fa-solid fa-house-chimney text-amber-500 mr-2"></i>收容單位與聯絡方式
+                        </h4>
+                        <div class="text-xs text-gray-600 space-y-1.5">
+                            <p><strong class="text-gray-700">收容名稱：</strong>${item.animal_shelter_name || '公立收容所'}</p>
+                            <p><strong class="text-gray-700">收容地址：</strong>${item.shelter_address || item.animal_place || '請參閱地方主管機關公告'}</p>
+                            <p><strong class="text-gray-700">聯絡電話：</strong><a href="tel:${item.shelter_tel}" class="text-amber-600 font-bold hover:underline">${item.shelter_tel || '暫無電話'}</a></p>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="pt-2 flex justify-end space-x-3">
+                        <button onclick="closeModal()" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xs rounded-xl transition">關閉</button>
+                        <a href="tel:${item.shelter_tel}" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs rounded-xl shadow transition flex items-center">
+                            <i class="fa-solid fa-phone mr-1.5"></i>立即電話諮詢
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        function updateCharts(data) {
+            if (!data || data.length === 0) return;
+
+            // 1. Kind Distribution Data
+            const kindCounts = { '貓': 0, '狗': 0, '其他': 0 };
+            data.forEach(i => {
+                if (i.animal_kind === '貓') kindCounts['貓']++;
+                else if (i.animal_kind === '狗') kindCounts['狗']++;
+                else kindCounts['其他']++;
+            });
+
+            // 2. Gender Data
+            const genderCounts = { '公': 0, '母': 0, '未知': 0 };
+            data.forEach(i => {
+                if (i.animal_sex === 'M') genderCounts['公']++;
+                else if (i.animal_sex === 'F') genderCounts['母']++;
+                else genderCounts['未知']++;
+            });
+
+            // 3. County Top 5
+            const countyCounts = {};
+            data.forEach(i => {
+                const c = i.cName || '其他';
+                countyCounts[c] = (countyCounts[c] || 0) + 1;
+            });
+            const sortedCounties = Object.entries(countyCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            // Render Chart 1 (Kind)
+            const ctxKind = document.getElementById('chart-kind').getContext('2d');
+            if (chartKindInstance) chartKindInstance.destroy();
+            chartKindInstance = new Chart(ctxKind, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(kindCounts),
+                    datasets: [{
+                        data: Object.values(kindCounts),
+                        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+            });
+
+            // Render Chart 2 (Gender)
+            const ctxGender = document.getElementById('chart-gender').getContext('2d');
+            if (chartGenderInstance) chartGenderInstance.destroy();
+            chartGenderInstance = new Chart(ctxGender, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(genderCounts),
+                    datasets: [{
+                        data: Object.values(genderCounts),
+                        backgroundColor: ['#60a5fa', '#f472b6', '#9ca3af']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+            });
+
+            // Render Chart 3 (County)
+            const ctxCounty = document.getElementById('chart-county').getContext('2d');
+            if (chartCountyInstance) chartCountyInstance.destroy();
+            chartCountyInstance = new Chart(ctxCounty, {
+                type: 'bar',
+                data: {
+                    labels: sortedCounties.map(c => c[0]),
+                    datasets: [{
+                        label: '數量',
+                        data: sortedCounties.map(c => c[1]),
+                        backgroundColor: '#d97706',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { ticks: { font: { size: 10 } } }, y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function toggleChartSection() {
+            const wrapper = document.getElementById('charts-wrapper');
+            const btn = document.getElementById('toggle-chart-btn');
+            isChartsVisible = !isChartsVisible;
+
+            if (isChartsVisible) {
+                wrapper.classList.remove('hidden');
+                btn.innerHTML = '<i class="fa-solid fa-chevron-up mr-1"></i>收合統計圖表';
+            } else {
+                wrapper.classList.add('hidden');
+                btn.innerHTML = '<i class="fa-solid fa-chevron-down mr-1"></i>展開統計圖表';
+            }
+        }
+
+        function switchCareTab(type) {
+            const btns = document.querySelectorAll('.care-nav-btn');
+            btns.forEach(b => {
+                b.className = "care-nav-btn border-b-2 border-transparent pb-3 text-gray-500 hover:text-gray-800 font-semibold text-sm sm:text-base flex items-center";
+            });
+
+            document.getElementById(`care-tab-${type}`).className = "care-nav-btn border-b-2 border-amber-500 pb-3 text-amber-600 font-bold text-sm sm:text-base flex items-center";
+            renderCareGuide(type);
+        }
+
+        function renderCareGuide(type) {
+            const panel = document.getElementById('care-content-panel');
+
+            if (type === 'cat') {
+                panel.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
+                        <div class="bg-white p-6 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-bowl-food"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">1. 飲食與水分</h3>
+                            <ul class="text-xs text-gray-600 space-y-2 list-disc list-inside leading-relaxed">
+                                <li>貓咪為純肉食動物，需高蛋白質飲食。</li>
+                                <li>乾糧搭配主食罐頭，補充足夠水分預估腎臟疾病。</li>
+                                <li>嚴禁餵食洋蔥、大蒜、巧克力與葡萄。</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-house-lock"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">2. 居家安全門窗防護</h3>
+                            <ul class="text-xs text-gray-600 space-y-2 list-disc list-inside leading-relaxed">
+                                <li>陽台與窗戶必須安裝格網或防跳窗裝置。</li>
+                                <li>準備至少 N+1 個貓砂盆，並定時每日清理。</li>
+                                <li>提供高處貓跳台與抓板以抒發壓力。</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-stethoscope"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">3. 健康檢查與疫苗</h3>
+                            <ul class="text-xs text-gray-600 space-y-2 list-disc list-inside leading-relaxed">
+                                <li>每年定期施打三合一/核心疫苗與狂犬病疫苗。</li>
+                                <li>定期進行體內外驅蟲（跳蚤、心絲蟲）。</li>
+                                <li>7歲以上建議每年進行年度血檢與超音波檢查。</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'dog') {
+                panel.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 fade-in">
+                        <div class="bg-white p-6 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-dog"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">1. 每日運動與散步</h3>
+                            <ul class="text-xs text-gray-600 space-y-2 list-disc list-inside leading-relaxed">
+                                <li>中大型犬每日至少需散步 1 小時，小型犬 30 分鐘。</li>
+                                <li>外出務必配戴牽繩，確保犬隻與他人安全。</li>
+                                <li>夏季注意地面高溫，防止掌墊燙傷與中暑。</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">2. 正向獎勵社會化訓練</h3>
+                            <ul class="text-xs text-gray-600 space-y-2 list-disc list-inside leading-relaxed">
+                                <li>幼犬時期建立良好的社會化經驗，降低焦慮。</li>
+                                <li>以零食與鼓勵進行正向訓練，絕不打罵。</li>
+                                <li>訓練定點大小便與基本服從指令。</li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">3. 心絲蟲與寄生蟲預防</h3>
+                            <ul class="text-xs text-gray-600 space-y-2 list-disc list-inside leading-relaxed">
+                                <li>每月按時服用心絲蟲預防藥。</li>
+                                <li>定期給予壁蝨與跳蚤驅蟲藥物。</li>
+                                <li>散步後檢查毛髮與腳掌有無夾帶寄生蟲。</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else {
+                panel.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
+                        <div class="bg-white p-6 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-microchip"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">寵物登記與植入晶片 (法規強制)</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed">
+                                依據《動物保護法》規定，寵物飼主應於寵物出生日起 4 個月內，攜帶寵物至直轄市或縣（市）主管機關指定之機構，辦理寵物登記並植入晶片。違者可處新臺幣 3,000 元以上 15,000 元以下罰鍰。
+                            </p>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-2xl border border-amber-100 shadow-sm space-y-3">
+                            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-[#f59e0b] fa-scissors"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800 text-base">絕育絕育申報</h3>
+                            <p class="text-xs text-gray-600 leading-relaxed">
+                                飼主應為寵物絕育，以防止過度繁殖及預防生殖系統疾病（如子宮蓄膿、睪丸腫瘤）。若有不適合絕育之特殊原因，需向地方主管機關提出免絕育申報。
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
